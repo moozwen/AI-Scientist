@@ -18,9 +18,12 @@ calibrated against the 120 published measurements of Takaya et al. (2015).
 
 **The oracle is NOT an accurate predictor.** Its rank correlation with the
 measurements is only rho ~ 0.72-0.77 across all conditions -- lower than a
-trivial predictor that looks at nothing but the acid type (rho = 0.818). Treat
-it as a screening device, not as truth. Depending on the experimental arm it
-may or may not tell you where it is trustworthy.
+trivial predictor that looks at nothing but the acid type (rho = 0.818). It
+reaches rho = 0.876-0.929 only near 25 C; at 50 C and 75 C it invents a
+temperature dependence the measurements do not show, and the ranking inverts.
+It is blind to leaching time by construction. Every score carries `in_domain`,
+`reliability` and `domain_note` saying whether that condition is inside the
+calibrated regime.
 
 SEARCH SPACE (fixed -- recipes outside it are rejected)
 ------------------------------------------------------

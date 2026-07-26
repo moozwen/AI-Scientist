@@ -172,3 +172,6 @@ ICLR2022-OpenReviewData/
 templates/*/run_0/
 templates/*/*.png
 results/*
+
+# 生成物。腕ごとに materialize_arm.py で作り直すので追跡しない
+templates/*/ideas.json
