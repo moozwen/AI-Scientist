@@ -1,0 +1,34 @@
+[
+    {
+        "Name": "dilute_acid_sweep",
+        "Title": "Is Dilute Acid Really Optimal? A Concentration Sweep at Room Temperature",
+        "Experiment": "Populate RECIPES with the full concentration ladder for both acids at 25 C and 5 min in seawater (HCl at 0.5/1.0/2.0/3.0 M and H2SO4 at 0.25/0.5/1.0/1.5 M, which are matched in normality). The received wisdom is that dilute acid is optimal because concentrated acid is wasted on gangue minerals and drags impurities into solution. Check whether the composite objective, which charges for acid consumed, actually reproduces that. Report the recovery-versus-acid trade-off and identify the knee of the curve.",
+        "Interestingness": 7,
+        "Feasibility": 9,
+        "Novelty": 4
+    },
+    {
+        "Name": "acid_selection_mechanism",
+        "Title": "Why Sulfuric Acid Underperforms: Separating Acidity from Sulfate Chemistry",
+        "Experiment": "Compare HCl and H2SO4 at matched normality across all three temperatures, in both seawater and Milli-Q water. Sulfuric acid is far cheaper per proton, so a recovery penalty must be quantified before it can be dismissed. Two mechanisms are confounded in seawater: gypsum precipitation traps rare earths by coprecipitation, and sodium from seawater enables a rare-earth double sulfate to precipitate. The Milli-Q rows remove the sodium pathway. Use the contrast to argue which mechanism dominates, and state which part of that argument the equilibrium scorer can actually support.",
+        "Interestingness": 9,
+        "Feasibility": 8,
+        "Novelty": 7
+    },
+    {
+        "Name": "temperature_is_not_free",
+        "Title": "Does Heating Help? Testing a Recommendation the Scorer Cannot Justify",
+        "Experiment": "Heating usually accelerates leaching, and process designers reach for it by default. Evaluate the temperature ladder (25/50/75 C) at fixed acid and concentration. Then examine what the scorer's answer rests on: it is an equilibrium model, so it cannot represent reaction rates, and its temperature response comes entirely from the shifting bisulfate-sulfate speciation and gypsum solubility. Decide whether the evidence supports a temperature recommendation at all, and say so plainly in the write-up if it does not.",
+        "Interestingness": 8,
+        "Feasibility": 9,
+        "Novelty": 6
+    },
+    {
+        "Name": "cost_weighted_frontier",
+        "Title": "The Reagent-Cost Frontier: Recipes That Survive an Economic Objective",
+        "Experiment": "Low-grade ore economics are dominated by reagent consumption, so the highest-recovery recipe is rarely the best recipe. Build the Pareto set of recovery against acid consumed by evaluating a spread of recipes across both acids and all concentrations, then identify which points survive under the composite objective and how the ranking would change if the acid penalty were doubled or halved. Report how sensitive the recommended recipe is to that weight.",
+        "Interestingness": 8,
+        "Feasibility": 9,
+        "Novelty": 6
+    }
+]
