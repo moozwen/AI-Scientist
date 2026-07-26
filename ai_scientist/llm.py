@@ -10,8 +10,30 @@ from google.generativeai.types import GenerationConfig
 
 MAX_NUM_TOKENS = 4096
 
+# Claude Sonnet 5 uses a newer tokenizer (~30% more tokens for the same text) and
+# runs adaptive thinking by default; `max_tokens` caps thinking + response text
+# together. 4096 truncates idea generation and write-up, so the Anthropic path gets
+# its own ceiling. Kept at 16k so non-streaming requests stay inside SDK timeouts.
+MAX_NUM_TOKENS_ANTHROPIC = 16000
+
+# The upstream decorators only retried OpenAI errors, so an Anthropic rate limit
+# or timeout aborted the whole run. Both providers are covered here.
+RETRYABLE_API_ERRORS = (
+    openai.RateLimitError,
+    openai.APITimeoutError,
+    anthropic.RateLimitError,
+    anthropic.APITimeoutError,
+    anthropic.InternalServerError,
+)
+
 AVAILABLE_LLMS = [
     # Anthropic models
+    "claude-sonnet-5",
+    "claude-opus-5",
+    "claude-haiku-4-5",
+    # Retired 2025-10-28 -- these 404. Left in the list only so that a config
+    # naming one still passes this check and fails at the client with Anthropic's
+    # own "model not found" message, rather than an opaque KeyError here.
     "claude-3-5-sonnet-20240620",
     "claude-3-5-sonnet-20241022",
     # OpenAI models
@@ -63,7 +85,7 @@ AVAILABLE_LLMS = [
 
 
 # Get N responses from a single message, used for ensembling.
-@backoff.on_exception(backoff.expo, (openai.RateLimitError, openai.APITimeoutError))
+@backoff.on_exception(backoff.expo, RETRYABLE_API_ERRORS)
 def get_batch_responses_from_llm(
         msg,
         client,
@@ -139,7 +161,7 @@ def get_batch_responses_from_llm(
     return content, new_msg_history
 
 
-@backoff.on_exception(backoff.expo, (openai.RateLimitError, openai.APITimeoutError))
+@backoff.on_exception(backoff.expo, RETRYABLE_API_ERRORS)
 def get_response_from_llm(
         msg,
         client,
@@ -164,14 +186,26 @@ def get_response_from_llm(
                 ],
             }
         ]
+        # Claude Sonnet 5 / Opus 5 reject a non-default `temperature` (400), so it
+        # is not forwarded here. Steer these models through the system prompt
+        # instead -- see templates/*/prompt.json.
         response = client.messages.create(
             model=model,
-            max_tokens=MAX_NUM_TOKENS,
-            temperature=temperature,
+            max_tokens=MAX_NUM_TOKENS_ANTHROPIC,
             system=system_message,
             messages=new_msg_history,
         )
-        content = response.content[0].text
+        # Adaptive thinking is on by default on Sonnet 5, so content[0] can be a
+        # thinking block rather than text. Select by block type, never by index.
+        content = next(
+            (block.text for block in response.content if block.type == "text"), ""
+        )
+        if not content:
+            raise RuntimeError(
+                f"{model} returned no text block "
+                f"(stop_reason={response.stop_reason}, "
+                f"blocks={[b.type for b in response.content]})"
+            )
         new_msg_history = new_msg_history + [
             {
                 "role": "assistant",

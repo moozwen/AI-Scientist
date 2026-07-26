@@ -48,9 +48,19 @@ def parse_arguments():
     parser.add_argument(
         "--model",
         type=str,
-        default="claude-3-5-sonnet-20240620",
+        default="claude-sonnet-5",
         choices=AVAILABLE_LLMS,
         help="Model to use for AI Scientist.",
+    )
+    parser.add_argument(
+        "--reviewer-model",
+        type=str,
+        default=None,
+        choices=AVAILABLE_LLMS,
+        help=(
+            "Model for the automated reviewer. Defaults to --model. Upstream "
+            "hardcoded gpt-4o here, which fails when only an Anthropic key is set."
+        ),
     )
     parser.add_argument(
         "--writeup",
@@ -129,6 +139,8 @@ def worker(
         writeup,
         improvement,
         gpu_id,
+        reviewer_model=None,
+        reviewer_client=None,
 ):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
     print(f"Worker {gpu_id} started.")
@@ -146,6 +158,8 @@ def worker(
             writeup,
             improvement,
             log_file=True,
+            reviewer_model=reviewer_model,
+            reviewer_client=reviewer_client,
         )
         print(f"Completed idea: {idea['Name']}, Success: {success}")
     print(f"Worker {gpu_id} finished.")
@@ -161,7 +175,16 @@ def do_idea(
         writeup,
         improvement,
         log_file=False,
+        reviewer_model=None,
+        reviewer_client=None,
 ):
+    # Upstream hardcoded the reviewer to gpt-4o. Fall back to the main model so a
+    # run with only an Anthropic key still reviews.
+    if reviewer_model is None:
+        reviewer_model = model
+    if reviewer_client is None:
+        reviewer_client, reviewer_model = create_client(reviewer_model)
+
     ## CREATE PROJECT FOLDER
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     idea_name = f"{timestamp}_{idea['Name']}"
@@ -267,8 +290,8 @@ def do_idea(
                 paper_text = load_paper(f"{folder_name}/{idea['Name']}.pdf")
                 review = perform_review(
                     paper_text,
-                    model="gpt-4o-2024-05-13",
-                    client=openai.OpenAI(),
+                    model=reviewer_model,
+                    client=reviewer_client,
                     num_reflections=5,
                     num_fs_examples=1,
                     num_reviews_ensemble=5,
@@ -293,8 +316,8 @@ def do_idea(
                 paper_text = load_paper(f"{folder_name}/{idea['Name']}_improved.pdf")
                 review = perform_review(
                     paper_text,
-                    model="gpt-4o-2024-05-13",
-                    client=openai.OpenAI(),
+                    model=reviewer_model,
+                    client=reviewer_client,
                     num_reflections=5,
                     num_fs_examples=1,
                     num_reviews_ensemble=5,
@@ -411,6 +434,7 @@ if __name__ == "__main__":
                     client_model,
                     args.writeup,
                     args.improvement,
+                    reviewer_model=args.reviewer_model,
                 )
                 print(f"Completed idea: {idea['Name']}, Success: {success}")
             except Exception as e:
