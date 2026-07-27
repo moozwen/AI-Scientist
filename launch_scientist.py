@@ -10,7 +10,7 @@ import time
 import torch
 from aider.coders import Coder
 from aider.io import InputOutput
-from aider.models import Model
+from aider.models import Model, register_models
 from datetime import datetime
 
 from ai_scientist.generate_ideas import generate_ideas, check_idea_novelty
@@ -354,6 +354,12 @@ if __name__ == "__main__":
 
     print(f"Using GPUs: {available_gpus}")
 
+    # aider only reads .aider.model.settings.yml from its CLI entry point. We use
+    # Model() programmatically, so load it here -- without it Claude 5 models get
+    # use_temperature=True and every aider call 400s.
+    register_models([osp.join(osp.dirname(osp.abspath(__file__)),
+                              ".aider.model.settings.yml")])
+
     # Check LaTeX dependencies before proceeding
     if args.writeup == "latex" and not check_latex_dependencies():
         sys.exit(1)
@@ -383,7 +389,10 @@ if __name__ == "__main__":
     with open(osp.join(base_dir, "ideas.json"), "w") as f:
         json.dump(ideas, f, indent=4)
 
-    novel_ideas = [idea for idea in ideas if idea["novel"]]
+    # generate_ideas() does not set "novel" -- only check_idea_novelty() does.
+    # With --skip-novelty-check upstream raised KeyError here, so an unchecked
+    # idea is treated as novel rather than crashing the run.
+    novel_ideas = [idea for idea in ideas if idea.get("novel", True)]
     # novel_ideas = list(reversed(novel_ideas))
 
     if args.parallel > 0:
