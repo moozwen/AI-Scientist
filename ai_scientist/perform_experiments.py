@@ -1,12 +1,17 @@
 import json
+import os
 import os.path as osp
 import shutil
 import subprocess
 import sys
 from subprocess import TimeoutExpired
 
-MAX_ITERS = 4
-MAX_RUNS = 5
+# Cost knobs. Defaults match upstream; lower them to bound API spend while
+# smoke-testing a template. Worst case the experiment stage makes
+# MAX_RUNS * MAX_ITERS aider calls, each carrying experiment.py + plot.py +
+# notes.txt in full -- that is the second-largest consumer after the writeup.
+MAX_ITERS = int(os.environ.get("AIS_MAX_ITERS", "4"))
+MAX_RUNS = int(os.environ.get("AIS_MAX_RUNS", "5"))
 MAX_STDERR_OUTPUT = 1500
 
 coder_prompt = """Your goal is to implement the following idea: {title}.

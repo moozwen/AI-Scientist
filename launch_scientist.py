@@ -292,9 +292,10 @@ def do_idea(
                     paper_text,
                     model=reviewer_model,
                     client=reviewer_client,
-                    num_reflections=5,
+                    num_reflections=int(os.environ.get("AIS_REVIEW_REFLECTIONS", "5")),
                     num_fs_examples=1,
-                    num_reviews_ensemble=5,
+                    num_reviews_ensemble=int(
+                        os.environ.get("AIS_REVIEW_ENSEMBLE", "5")),
                     temperature=0.1,
                 )
                 # Store the review in separate review.txt file
@@ -318,9 +319,10 @@ def do_idea(
                     paper_text,
                     model=reviewer_model,
                     client=reviewer_client,
-                    num_reflections=5,
+                    num_reflections=int(os.environ.get("AIS_REVIEW_REFLECTIONS", "5")),
                     num_fs_examples=1,
-                    num_reviews_ensemble=5,
+                    num_reviews_ensemble=int(
+                        os.environ.get("AIS_REVIEW_ENSEMBLE", "5")),
                     temperature=0.1,
                 )
                 # Store the review in separate review.txt file
