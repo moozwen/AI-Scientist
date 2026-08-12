@@ -101,6 +101,24 @@ def get_available_gpus(gpu_ids=None):
     return list(range(torch.cuda.device_count()))
 
 
+def _drop_temperature(main_model):
+    """slow-batch: aider にも temperature を送らせない。
+
+    Sonnet 5 は `temperature` を 400 で拒否する。aider 0.86.2 の
+    model-settings.yml は Sonnet 5 を知らないので、既定の
+    `use_temperature=True` のまま送ってしまう。**実験ループは全部 aider 経由**
+    なので、ここを塞がないと 1 往復目で落ちる。
+    """
+    from ai_scientist.llm import NO_TEMPERATURE
+
+    name = getattr(main_model, "name", "") or ""
+    if any(p in name for p in NO_TEMPERATURE) and hasattr(
+        main_model, "use_temperature"
+    ):
+        main_model.use_temperature = False
+        print(f"[slow-batch] {name}: temperature を送らない設定にした")
+
+
 def check_latex_dependencies():
     """
     Check if required LaTeX dependencies are installed on the system.
@@ -213,6 +231,7 @@ def do_idea(
             main_model = Model("openrouter/meta-llama/llama-3.1-405b-instruct")
         else:
             main_model = Model(model)
+        _drop_temperature(main_model)
         coder = Coder.create(
             main_model=main_model,
             fnames=fnames,
@@ -256,6 +275,7 @@ def do_idea(
                 main_model = Model("openrouter/meta-llama/llama-3.1-405b-instruct")
             else:
                 main_model = Model(model)
+            _drop_temperature(main_model)
             coder = Coder.create(
                 main_model=main_model,
                 fnames=fnames,

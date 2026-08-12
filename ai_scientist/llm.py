@@ -10,6 +10,17 @@ from google.generativeai.types import GenerationConfig
 
 MAX_NUM_TOKENS = 4096
 
+# slow-batch: Sonnet 5 は temperature を受け付けない。
+#   400 invalid_request_error: `temperature` is deprecated for this model.
+# 400 は例外にならず backoff も効かないので、**送らない**しかない。
+NO_TEMPERATURE = ("claude-sonnet-5", "claude-opus-5", "claude-haiku-5")
+
+
+def _temperature_kwargs(model, temperature):
+    if any(model.startswith(p) for p in NO_TEMPERATURE):
+        return {}
+    return {"temperature": temperature}
+
 AVAILABLE_LLMS = [
     # Anthropic models
     # slow-batch: 既定の claude-3-5-sonnet-20240620 は litellm 1.81 の
@@ -170,9 +181,9 @@ def get_response_from_llm(
         response = client.messages.create(
             model=model,
             max_tokens=MAX_NUM_TOKENS,
-            temperature=temperature,
             system=system_message,
             messages=new_msg_history,
+            **_temperature_kwargs(model, temperature),
         )
         # slow-batch: Sonnet 5 は ThinkingBlock を先頭に返すので、
         # content[0].text だと AttributeError で落ちる。最初の text ブロックを取る。

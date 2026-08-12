@@ -1,7 +1,7 @@
 # `slow-batch` ブランチ
 
 [slow-batch](https://github.com/moozwen/slow-batch) の W-37（規則集合の探索）から
-このリポジトリを使うための差分だけを載せたブランチ。**upstream から 6 か所しか変えていない。**
+このリポジトリを使うための差分だけを載せたブランチ。**upstream から 8 か所しか変えていない。**
 
 設計の根拠は slow-batch 側の `docs/07-phase4-design.md` §7・§11.6・§11.9、
 テンプレートの説明は `templates/slow-batch/README.md`（シンボリックリンク先）にある。
@@ -16,6 +16,8 @@
 | 4 | `ai_scientist/llm.py` `AVAILABLE_LLMS` | **`claude-sonnet-5` を追加** | `--model` は `choices=AVAILABLE_LLMS` で弾かれる。既定の `claude-3-5-sonnet-20240620` は litellm 1.81 のモデル表から消えている |
 | 5 | `ai_scientist/llm.py` `get_response_from_llm` | `response.content[0].text` → **最初の `text` ブロック** | Sonnet 5 は **`ThinkingBlock` を先頭に返す**。`content[0].text` は `AttributeError` になる |
 | 6 | `launch_scientist.py` `--writeup` | **`none` を追加**（実験が終わったら `return True`） | **W-37 の成果物は `rules.json` と `notes.txt` で、論文ではない。**latex 段は `pdflatex` / `chktex` を要求し（**VM に無い**）、`perform_review` は **OpenAI の `gpt-4o-2024-05-13`** を叩く（`OPENAI_API_KEY` が要る）。**どちらも本 PoC に無関係で、API 費用だけ増える** |
+| 7 | `ai_scientist/llm.py` | **`temperature` を送らない**（`NO_TEMPERATURE`） | Sonnet 5 は **400 `temperature` is deprecated for this model.** で拒否する。**400 は例外にならず backoff も効かない**ので、送らないしかない |
+| 8 | `launch_scientist.py` `_drop_temperature` | **aider の `Model.use_temperature = False`** | **実験ループは全部 aider 経由**である。aider 0.86.2 の `model-settings.yml` は Sonnet 5 を知らず、既定の `use_temperature=True` のまま送る。**ここを塞がないと 1 往復目で落ちる** |
 
 執筆段階の `fnames`（`launch_scientist.py:240`）は**触っていない。**
 `--writeup none` で到達しないうえ、執筆は実験が終わってから走るので、
@@ -124,7 +126,35 @@ python launch_scientist.py --experiment slow-batch --model claude-sonnet-5 \
   ラウンド（累積 16 / 24 / 32 タスク）は環境変数で渡す。**付け忘れると常にラウンド 0。**
 - **`PYTHONUNBUFFERED=1`** — パイプに繋ぐと Python が出力を溜め込む。子プロセスまで効かせる。
 - **`--skip-novelty-check`** — Semantic Scholar は本 PoC と無関係。
-- **`--num-ideas 1`** — 1 ラウンド 1 アイデア。
+- **`--num-ideas 1`** — **アイデア生成をするときの上限。**`--skip-idea-generation` を
+  付けているので**この値は効かない**（下記）。
+
+### ⚠️ `--skip-idea-generation` は **`ideas.json` を読む**。`seed_ideas.json` ではない
+
+```python
+# generate_ideas.py:84
+if skip_generation:
+    try:
+        with open(osp.join(base_dir, "ideas.json")) as f: ...
+    except FileNotFoundError:
+        print("No existing ideas found. Generating new ideas.")   # ← 黙って生成に落ちる
+```
+
+**失敗しない。生成に落ちる。**そして `--skip-novelty-check` を付けていると
+生成物に `novel` キーが付かないので、**`KeyError: 'novel'` で落ちる**（`launch_scientist.py:397`）。
+
+**⚠️ `ideas.json` の要素数がそのままアイデア数になる。**`--num-ideas` は
+`max_num_generations`（生成側の上限）にしか渡らないので、
+**3 件書くと 3 アイデア × 最大 3 実験 ＝ 9 実験**走る。**D-W37 は 1 ラウンド 1 アイデア。**
+
+```bash
+python -c "
+import json; d=json.load(open('templates/slow-batch/ideas.json'))
+print(len(d), [i['Name'] for i in d], all('novel' in i for i in d))"
+# → 1 ['require_read_before_write'] True
+```
+
+**ラウンドごとに `ideas.json` を 1 件だけ差し替える**（候補は `seed_ideas.json` に 3 つ置いてある）。
 - **`--parallel` は使わない** — 使うと `log_file=True` になって stdout がファイルに逸れ、
   `tee` が空になる（`launch_scientist.py:186`）。GPU も 1 枚しかない。
 
