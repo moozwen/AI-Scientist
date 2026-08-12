@@ -1,7 +1,7 @@
 # `slow-batch` ブランチ
 
 [slow-batch](https://github.com/moozwen/slow-batch) の W-37（規則集合の探索）から
-このリポジトリを使うための差分だけを載せたブランチ。**upstream から 5 か所しか変えていない。**
+このリポジトリを使うための差分だけを載せたブランチ。**upstream から 6 か所しか変えていない。**
 
 設計の根拠は slow-batch 側の `docs/07-phase4-design.md` §7・§11.6・§11.9、
 テンプレートの説明は `templates/slow-batch/README.md`（シンボリックリンク先）にある。
@@ -15,9 +15,26 @@
 | 3 | `perform_experiments.py` `MAX_RUNS` | `5` → **`3`** | 1 実験が数時間なので、5 本だと 1 ラウンドで最大 23 時間 |
 | 4 | `ai_scientist/llm.py` `AVAILABLE_LLMS` | **`claude-sonnet-5` を追加** | `--model` は `choices=AVAILABLE_LLMS` で弾かれる。既定の `claude-3-5-sonnet-20240620` は litellm 1.81 のモデル表から消えている |
 | 5 | `ai_scientist/llm.py` `get_response_from_llm` | `response.content[0].text` → **最初の `text` ブロック** | Sonnet 5 は **`ThinkingBlock` を先頭に返す**。`content[0].text` は `AttributeError` になる |
+| 6 | `launch_scientist.py` `--writeup` | **`none` を追加**（実験が終わったら `return True`） | **W-37 の成果物は `rules.json` と `notes.txt` で、論文ではない。**latex 段は `pdflatex` / `chktex` を要求し（**VM に無い**）、`perform_review` は **OpenAI の `gpt-4o-2024-05-13`** を叩く（`OPENAI_API_KEY` が要る）。**どちらも本 PoC に無関係で、API 費用だけ増える** |
 
-`launch_scientist.py:236`（執筆段階の `fnames`）は**触っていない。**
-執筆は実験が終わってから走るので、そこで `experiment.py` を編集されても採点には影響しない。
+執筆段階の `fnames`（`launch_scientist.py:240`）は**触っていない。**
+`--writeup none` で到達しないうえ、執筆は実験が終わってから走るので、
+そこで `experiment.py` を編集されても採点には影響しない。
+
+### ⚠️ `notes.txt` は writeup の**前**に書き終わっている
+
+`--writeup none` で捨てているのは論文だけである。**探索の成果物は 2 つとも
+`perform_experiments` の中で完成している。**
+
+```
+perform_experiments()
+  ├ 実験 1..3          → rules.json の各版（slow-batch 側の git に残る）
+  ├ plot.py
+  └ 最後の coder.run() → notes.txt   ← §11.8 の運用レポートの素材
+─────────────────────────────────── ここまでで用は足りている
+perform_writeup()      論文（要らない）
+perform_review()       gpt-4o（鍵が無い）
+```
 
 ## なぜ外部 API なのか（slow-batch `docs/07-phase4-design.md` §12）
 
@@ -95,8 +112,13 @@ cd ~/sakana/AI-Scientist && source .venv-ais/bin/activate
 PYTHONUNBUFFERED=1 SLOW_BATCH_ROUND=0 \
 python launch_scientist.py --experiment slow-batch --model claude-sonnet-5 \
   --num-ideas 1 --skip-idea-generation --skip-novelty-check \
+  --writeup none \
   2>&1 | tee ~/w37_round0.log
 ```
+
+- **`--writeup none`** — 論文段を飛ばす。既定の `latex` は `pdflatex` / `chktex` が
+  無いと**起動直後に `sys.exit(1)`** する（`launch_scientist.py:350`）。
+  仮に入れても `perform_review` が **OpenAI の鍵**を要求する。
 
 - **`SLOW_BATCH_ROUND`** — v1 は `experiment.py --out_dir=run_i` としか呼ばないので、
   ラウンド（累積 16 / 24 / 32 タスク）は環境変数で渡す。**付け忘れると常にラウンド 0。**

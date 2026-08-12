@@ -56,7 +56,10 @@ def parse_arguments():
         "--writeup",
         type=str,
         default="latex",
-        choices=["latex"],
+        # slow-batch: "none" を追加。W-37 の成果物は rules.json と notes.txt であって
+        # 論文ではない。latex 段は (a) pdflatex / chktex を要求し、(b) review が
+        # OpenAI の gpt-4o を叩く（OPENAI_API_KEY が要る）。どちらも本 PoC には不要。
+        choices=["latex", "none"],
         help="What format to use for writeup",
     )
     parser.add_argument(
@@ -231,6 +234,13 @@ def do_idea(
         if not success:
             print(f"Experiments failed for idea {idea_name}")
             return False
+
+        # slow-batch: 成果物は rules.json（各版）と notes.txt で、どちらも
+        # perform_experiments の中で書き終わっている。論文段は要らない。
+        if writeup == "none":
+            print_time()
+            print("*Skipping writeup (--writeup none)*")
+            return True
 
         print_time()
         print(f"*Starting Writeup*")
