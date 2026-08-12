@@ -1,7 +1,7 @@
 # `slow-batch` ブランチ
 
 [slow-batch](https://github.com/moozwen/slow-batch) の W-37（規則集合の探索）から
-このリポジトリを使うための差分だけを載せたブランチ。**upstream から 4 か所しか変えていない。**
+このリポジトリを使うための差分だけを載せたブランチ。**upstream から 5 か所しか変えていない。**
 
 設計の根拠は slow-batch 側の `docs/07-phase4-design.md` §7・§11.6・§11.9、
 テンプレートの説明は `templates/slow-batch/README.md`（シンボリックリンク先）にある。
@@ -14,6 +14,7 @@
 | 2 | `perform_experiments.py` `run_experiment` | `timeout` を **43200（12 時間）** | 既定は **7200（2 時間）**。1 実験は 2.4〜4.7 時間で**全部超える。**しかも超えると `shutil.rmtree` で**結果ごと消える** |
 | 3 | `perform_experiments.py` `MAX_RUNS` | `5` → **`3`** | 1 実験が数時間なので、5 本だと 1 ラウンドで最大 23 時間 |
 | 4 | `ai_scientist/llm.py` `AVAILABLE_LLMS` | **`claude-sonnet-5` を追加** | `--model` は `choices=AVAILABLE_LLMS` で弾かれる。既定の `claude-3-5-sonnet-20240620` は litellm 1.81 のモデル表から消えている |
+| 5 | `ai_scientist/llm.py` `get_response_from_llm` | `response.content[0].text` → **最初の `text` ブロック** | Sonnet 5 は **`ThinkingBlock` を先頭に返す**。`content[0].text` は `AttributeError` になる |
 
 `launch_scientist.py:236`（執筆段階の `fnames`）は**触っていない。**
 執筆は実験が終わってから走るので、そこで `experiment.py` を編集されても採点には影響しない。
@@ -45,11 +46,14 @@ litellm は vLLM と話している層そのもの（リトライ・トークン
 
 ```bash
 cd ~/sakana/AI-Scientist
-python3 -m venv .venv-ais && source .venv-ais/bin/activate && pip install -U pip
-pip install anthropic aider-chat backoff openai google-generativeai \
-            requests numpy pypdf pymupdf pymupdf4llm
-pip install torch --index-url https://download.pytorch.org/whl/cpu
+uv venv --python 3.12 .venv-ais          # ← システムに pip / venv が無くても通る
+source .venv-ais/bin/activate
+uv pip install anthropic aider-chat backoff openai google-generativeai \
+               requests numpy pypdf pymupdf pymupdf4llm
+uv pip install torch --index-url https://download.pytorch.org/whl/cpu
 ```
+
+**`--python 3.12` は必須。**aider-chat は `<3.13` なので、3.13 の venv では install が失敗する。
 
 **`requirements.txt` は使わない。**`transformers` / `datasets` / `wandb` / `tiktoken` /
 `matplotlib` は nanoGPT テンプレート用で、`slow-batch` テンプレートは 1 つも使わない。
@@ -89,12 +93,28 @@ python launch_scientist.py --experiment slow-batch --model claude-sonnet-5 \
 ## 前提（起動前に確かめる）
 
 ```bash
+# ⚠️ content[0] は ThinkingBlock なので、text ブロックを探すこと
 python -c "
 from ai_scientist.llm import create_client
 c, m = create_client('claude-sonnet-5')
-print('OK', c.messages.create(model=m, max_tokens=16,
-      messages=[{'role':'user','content':'ok'}]).content[0].text)"
+r = c.messages.create(model=m, max_tokens=16, messages=[{'role':'user','content':'ok'}])
+print('OK', next(b.text for b in r.content if b.type == 'text'))"
 python -c "from aider.models import Model; m=Model('claude-sonnet-5'); print(m.name, m.info.get('max_input_tokens'))"
 python -c "import launch_scientist; print('import OK')"
 ls templates/slow-batch/run_0/final_info.json      # ベースラインが要る
 ```
+
+### `ANTHROPIC_API_KEY` は**文字種で濾して**入れる
+
+```bash
+umask 077
+read -rsp "ANTHROPIC_API_KEY: " K
+K=$(printf '%s' "$K" | LC_ALL=C tr -cd 'A-Za-z0-9_-')
+printf 'export ANTHROPIC_API_KEY=%s\n' "$K" > ~/.anthropic_env
+unset K; chmod 600 ~/.anthropic_env; source ~/.anthropic_env
+printf '%s' "$ANTHROPIC_API_KEY" | wc -c        # 108
+```
+
+**入力が見えないので矢印キーを押しがちだが、押すと `\033[A` がキーに混ざる。**
+エスケープ文字はヘッダに載せられないので、**Cloudflare が本文なしの 400 で弾く**
+（`cf-ray` だけ返り、`request-id` が無いのが目印。API が拒否したなら 401 / 404 に JSON が付く）。

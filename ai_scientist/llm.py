@@ -174,7 +174,9 @@ def get_response_from_llm(
             system=system_message,
             messages=new_msg_history,
         )
-        content = response.content[0].text
+        # slow-batch: Sonnet 5 は ThinkingBlock を先頭に返すので、
+        # content[0].text だと AttributeError で落ちる。最初の text ブロックを取る。
+        content = next(b.text for b in response.content if b.type == "text")
         new_msg_history = new_msg_history + [
             {
                 "role": "assistant",
