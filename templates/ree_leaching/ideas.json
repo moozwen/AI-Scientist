@@ -1,0 +1,42 @@
+[
+    {
+        "Name": "dilute_acid_sweep",
+        "Title": "Is Dilute Acid Really Optimal? A Concentration Sweep at Room Temperature",
+        "Experiment": "Populate RECIPES with the full concentration ladder for both acids at 25 C and 5 min in seawater (HCl at 0.5/1.0/2.0/3.0 M and H2SO4 at 0.25/0.5/1.0/1.5 M, which are matched in normality). The received wisdom is that dilute acid is optimal because concentrated acid is wasted on gangue minerals and drags impurities into solution. Check whether the composite objective, which charges for acid consumed, actually reproduces that. Report the recovery-versus-acid trade-off and identify the knee of the curve.",
+        "Interestingness": 7,
+        "Feasibility": 9,
+        "Novelty": 4
+    },
+    {
+        "Name": "acid_selection_mechanism",
+        "Title": "Why Sulfuric Acid Underperforms: Separating Acidity from Sulfate Chemistry",
+        "Experiment": "Compare HCl and H2SO4 at matched normality across all three temperatures, in both seawater and Milli-Q water. Sulfuric acid is far cheaper per proton, so a recovery penalty must be quantified before it can be dismissed. Two mechanisms are confounded in seawater: gypsum precipitation traps rare earths by coprecipitation, and sodium from seawater enables a rare-earth double sulfate to precipitate. The Milli-Q rows remove the sodium pathway. Use the contrast to argue which mechanism dominates, and state which part of that argument the equilibrium scorer can actually support.",
+        "Interestingness": 9,
+        "Feasibility": 8,
+        "Novelty": 7
+    },
+    {
+        "Name": "temperature_is_not_free",
+        "Title": "Does Heating Help? Testing a Recommendation the Scorer Cannot Justify",
+        "Experiment": "Heating usually accelerates leaching, and process designers reach for it by default. Evaluate the temperature ladder (25/50/75 C) at fixed acid and concentration. Then examine what the scorer's answer rests on: it is an equilibrium model, so it cannot represent reaction rates, and its temperature response comes entirely from the shifting bisulfate-sulfate speciation and gypsum solubility. Decide whether the evidence supports a temperature recommendation at all, and say so plainly in the write-up if it does not.",
+        "Interestingness": 8,
+        "Feasibility": 9,
+        "Novelty": 6
+    },
+    {
+        "Name": "cost_weighted_frontier",
+        "Title": "The Reagent-Cost Frontier: Recipes That Survive an Economic Objective",
+        "Experiment": "Low-grade ore economics are dominated by reagent consumption, so the highest-recovery recipe is rarely the best recipe. Build the Pareto set of recovery against acid consumed by evaluating a spread of recipes across both acids and all concentrations, then identify which points survive under the composite objective and how the ranking would change if the acid penalty were doubled or halved. Report how sensitive the recommended recipe is to that weight.",
+        "Interestingness": 8,
+        "Feasibility": 9,
+        "Novelty": 6
+    },
+    {
+        "Name": "domain_gated_optimum",
+        "Title": "Trust the Ruler, Not Just the Reading: Selecting Recipes by Gating the Oracle's Own Reliability Flag",
+        "Experiment": "Populate RECIPES with the full reachable grid (both acids x all their concentrations x all three temperatures x both diluents x all times, respecting the milliQ-only-at-5-min constraint) so that every one of the ~120 measured conditions is scored once in a single run. From the saved final_info.json 'evaluated' list (which carries in_domain, reliability, domain_note, and composite_J per recipe even though only 'means' reaches the live prompt), partition recipes into 'in_domain==True / high reliability' vs 'in_domain==False / low reliability'. Compute and report: (1) the naive best composite_J over the whole grid and its conditions, (2) the best composite_J restricted to the reliable partition, (3) the size of that gap and whether the naive winner sits at 50/75 C as the calibration note predicts, (4) whether gating by temperature alone (25 C only) reproduces the reliability-gated winner, or whether the reliability field flags additional unreliable points even at 25 C (e.g. specific acid/concentration/diluent combinations) that a temperature-only heuristic would miss, and (5) present the reliability-gated optimum as the recommended process condition, explicitly stating residual uncertainty (rho ~0.88-0.93 even in-domain) rather than treating the oracle's score as ground truth. This reframes recipe selection as constrained optimization under the oracle's own admitted validity mask, rather than an unconstrained argmax over its raw output.",
+        "Interestingness": 8,
+        "Feasibility": 9,
+        "Novelty": 8
+    }
+]

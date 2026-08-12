@@ -19,6 +19,22 @@
 `launch_scientist.py:236`（執筆段階の `fnames`）は**触っていない。**
 執筆は実験が終わってから走るので、そこで `experiment.py` を編集されても採点には影響しない。
 
+## なぜ外部 API なのか（slow-batch `docs/07-phase4-design.md` §12）
+
+本 PoC はオンプレ運用を想定しているが、**このリポジトリ＝探索器だけは Anthropic API で動く。**
+前提は「API を使わない」ではなく **「データが出ない」**である。
+
+- **エピソードは 1 件も通らない。**worker も user simulator も
+  `hosted_vllm/qwen3.5-9b` にソース中で固定（`slow-batch/scripts/experiment.py:544,548`）
+- **外に出る生データは `final_info.json` の `_evidence` だけ**——最大 **80 行**
+  （`task_id` ＋ ツール名 ＋ 引数 200 字）。会話本文もツール戻り値も入らない
+- **⚠️ `ANTHROPIC_API_KEY` は子プロセスに継承される。**保証しているのは
+  モデル指定の固定であって鍵の不在ではない
+
+外側を 9B に替えれば API はゼロになるが、**本 PoC ではやらない**——
+H6 が否定されたとき「遅いループが効かない」と「9B が規則を書けない」の区別がつかず、
+同じ vLLM に混ぜると worker のバッチ構成が変わってベースラインが無効になる（§12.5）。
+
 ## 設置
 
 ```bash
