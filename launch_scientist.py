@@ -194,7 +194,11 @@ def do_idea(
         print_time()
         print(f"*Starting idea: {idea_name}*")
         ## PERFORM EXPERIMENTS
-        fnames = [exp_file, vis_file, notes]
+        # slow-batch: 探索器に渡すのは rules.json と notes.txt だけにする。
+        # experiment.py を渡すと、採点器（scripts/experiment.py）を呼ぶ側を
+        # 書き換えられてしまい、dev / test を読ませることも λ を変えることもできる。
+        # 「採点器を探索空間の外に置く」を fnames の 1 行として実装する。
+        fnames = [osp.join(folder_name, "rules.json"), notes]
         io = InputOutput(
             yes=True, chat_history_file=f"{folder_name}/{idea_name}_aider.txt"
         )

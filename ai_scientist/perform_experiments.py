@@ -6,7 +6,9 @@ import sys
 from subprocess import TimeoutExpired
 
 MAX_ITERS = 4
-MAX_RUNS = 5
+# slow-batch: 1 実験が 2.4〜4.7 時間かかる（GPU で 16〜32 エピソードを回す）。
+# 5 実験だと 1 ラウンドで最大 23 時間。3 に減らす（07-phase4-design.md §11.9 案④）。
+MAX_RUNS = 3
 MAX_STDERR_OUTPUT = 1500
 
 coder_prompt = """Your goal is to implement the following idea: {title}.
@@ -131,7 +133,10 @@ def perform_experiments(idea, folder_name, coder, baseline_results) -> bool:
         print(coder_out)
         if "ALL_COMPLETED" in coder_out:
             break
-        return_code, next_prompt = run_experiment(folder_name, run)
+        # slow-batch: 既定の timeout=7200（2 時間）では 1 実験も完走しない。
+        # しかも TimeoutExpired 時に shutil.rmtree で結果ごと消えるので、
+        # GPU を燃やして成果物がゼロになる。12 時間に伸ばす。
+        return_code, next_prompt = run_experiment(folder_name, run, timeout=43200)
         if return_code == 0:
             run += 1
             current_iter = 0

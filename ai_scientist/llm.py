@@ -12,6 +12,9 @@ MAX_NUM_TOKENS = 4096
 
 AVAILABLE_LLMS = [
     # Anthropic models
+    # slow-batch: 既定の claude-3-5-sonnet-20240620 は litellm 1.81 の
+    # モデル表から消えている（"This model isn't mapped yet"）。
+    "claude-sonnet-5",
     "claude-3-5-sonnet-20240620",
     "claude-3-5-sonnet-20241022",
     # OpenAI models
