@@ -112,7 +112,7 @@ tau2-bench uv 環境                 litellm 1.81.11。**ここは凍結する**
 
 ```bash
 cd ~/sakana/AI-Scientist && source .venv-ais/bin/activate
-PYTHONUNBUFFERED=1 SLOW_BATCH_ROUND=0 \
+PYTHONUNBUFFERED=1 SLOW_BATCH_REPO=$HOME/sakana/slow-batch SLOW_BATCH_ROUND=0 \
 python launch_scientist.py --experiment slow-batch --model claude-sonnet-5 \
   --num-ideas 1 --skip-idea-generation --skip-novelty-check \
   --writeup none \
@@ -123,6 +123,12 @@ python launch_scientist.py --experiment slow-batch --model claude-sonnet-5 \
   無いと**起動直後に `sys.exit(1)`** する（`launch_scientist.py:350`）。
   仮に入れても `perform_review` が **OpenAI の鍵**を要求する。
 
+- **`SLOW_BATCH_REPO`** — **v1 はテンプレート一式を `results/slow-batch/<日時>_<アイデア名>/`
+  へコピーしてから、そこを cwd にして走らせる。**殻から見た 2 つ上は
+  `AI-Scientist/results` になり、`scripts/experiment.py` が無い。
+  **付け忘れると Aider が `MAX_ITERS` 回空回りする**——失敗が起きるのは実験の起動後なので
+  v1 は「実験が失敗した」と扱うが、**Aider が触れるのは `rules.json` と `notes.txt` だけで、
+  どちらもこのエラーと無関係**である。
 - **`SLOW_BATCH_ROUND`** — v1 は `experiment.py --out_dir=run_i` としか呼ばないので、
   ラウンド（累積 16 / 24 / 32 タスク）は環境変数で渡す。**付け忘れると常にラウンド 0。**
 - **`PYTHONUNBUFFERED=1`** — パイプに繋ぐと Python が出力を溜め込む。子プロセスまで効かせる。
