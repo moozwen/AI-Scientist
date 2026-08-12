@@ -1,7 +1,7 @@
 # `slow-batch` ブランチ
 
 [slow-batch](https://github.com/moozwen/slow-batch) の W-37（規則集合の探索）から
-このリポジトリを使うための差分だけを載せたブランチ。**upstream から 8 か所しか変えていない。**
+このリポジトリを使うための差分だけを載せたブランチ。**upstream から 9 か所しか変えていない。**
 
 設計の根拠は slow-batch 側の `docs/07-phase4-design.md` §7・§11.6・§11.9、
 テンプレートの説明は `templates/slow-batch/README.md`（シンボリックリンク先）にある。
@@ -18,6 +18,7 @@
 | 6 | `launch_scientist.py` `--writeup` | **`none` を追加**（実験が終わったら `return True`） | **W-37 の成果物は `rules.json` と `notes.txt` で、論文ではない。**latex 段は `pdflatex` / `chktex` を要求し（**VM に無い**）、`perform_review` は **OpenAI の `gpt-4o-2024-05-13`** を叩く（`OPENAI_API_KEY` が要る）。**どちらも本 PoC に無関係で、API 費用だけ増える** |
 | 7 | `ai_scientist/llm.py` | **`temperature` を送らない**（`NO_TEMPERATURE`） | Sonnet 5 は **400 `temperature` is deprecated for this model.** で拒否する。**400 は例外にならず backoff も効かない**ので、送らないしかない |
 | 8 | `launch_scientist.py` `_drop_temperature` | **aider の `Model.use_temperature = False`** | **実験ループは全部 aider 経由**である。aider 0.86.2 の `model-settings.yml` は Sonnet 5 を知らず、既定の `use_temperature=True` のまま送る。**ここを塞がないと 1 往復目で落ちる** |
+| 9 | `launch_scientist.py` `ideas.json` の書き戻し | **`--skip-idea-generation` のときは書かない**＋`novel` 欠落を `SystemExit` にする | **`ideas.json` は入力である**（D-W37：1 ラウンド 1 アイデアを人が選ぶ）。upstream は**無条件に上書き**するので、**生成に落ちた回の産物が git 追跡下の入力を潰す。**実際に潰れた（1 件 → 3 件・`novel` 無し） |
 
 執筆段階の `fnames`（`launch_scientist.py:240`）は**触っていない。**
 `--writeup none` で到達しないうえ、執筆は実験が終わってから走るので、
@@ -155,6 +156,15 @@ print(len(d), [i['Name'] for i in d], all('novel' in i for i in d))"
 ```
 
 **ラウンドごとに `ideas.json` を 1 件だけ差し替える**（候補は `seed_ideas.json` に 3 つ置いてある）。
+
+**⚠️ `templates/slow-batch` は slow-batch リポジトリへのシンボリックリンクである。**
+上の事故で `ideas.json` が上書きされたとき、**汚れるのは slow-batch 側の作業ツリー**で、
+そのまま `git pull` すると衝突する。復旧は slow-batch 側で：
+
+```bash
+cd ~/sakana/slow-batch
+git checkout -- templates/slow-batch/ideas.json && git pull
+```
 - **`--parallel` は使わない** — 使うと `log_file=True` になって stdout がファイルに逸れ、
   `tee` が空になる（`launch_scientist.py:186`）。GPU も 1 枚しかない。
 

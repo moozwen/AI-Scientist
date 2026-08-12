@@ -391,8 +391,23 @@ if __name__ == "__main__":
             engine=args.engine,
         )
 
-    with open(osp.join(base_dir, "ideas.json"), "w") as f:
-        json.dump(ideas, f, indent=4)
+    # slow-batch: ideas.json は**入力**である（D-W37：1 ラウンド 1 アイデアを人が選ぶ）。
+    # upstream は無条件に上書きするので、生成に落ちた回の産物が
+    # git 追跡下のファイルを潰す。--skip-idea-generation のときは書かない。
+    if not args.skip_idea_generation:
+        with open(osp.join(base_dir, "ideas.json"), "w") as f:
+            json.dump(ideas, f, indent=4)
+
+    # slow-batch: novel が無いのは「生成に落ちた」印である。
+    # 黙って KeyError にせず、何が起きたかを言って止める。
+    missing = [i.get("Name", "?") for i in ideas if "novel" not in i]
+    if missing:
+        raise SystemExit(
+            f"ideas.json に novel キーが無い: {missing}\n"
+            "  → --skip-idea-generation を付けたのに ideas.json が読めず、\n"
+            "     アイデア生成に落ちた産物がそのまま来ている。\n"
+            f"  → {osp.join(base_dir, 'ideas.json')} を 1 件・novel: true で置き直すこと。"
+        )
 
     novel_ideas = [idea for idea in ideas if idea["novel"]]
     # novel_ideas = list(reversed(novel_ideas))
